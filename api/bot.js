@@ -1,11 +1,28 @@
-import TelegramBot from "node-telegram-bot-api";
 import OpenAI from "openai";
 
+// Initialise the OpenAI client once, outside the handler
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const TELEGRAM_API = `https://api.telegram.org/bot${process.env.BOT_TOKEN}`;
+
+// A simple function to send a message using fetch
+async function sendMessage(chatId, text) {
+  const url = `${TELEGRAM_API}/sendMessage`;
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text,
+    }),
+  });
+}
+
 export default async function handler(req, res) {
+  // Respond to non-POST requests for health checks
   if (req.method !== "POST") {
-    // Respond to non-POST requests to show the bot is live
-    res.status(200).send("Bot endpoint is live!");
-    return;
+    return res.status(200).send("Bot endpoint is live!");
   }
 
   try {
@@ -13,9 +30,6 @@ export default async function handler(req, res) {
     console.log("Received update:", JSON.stringify(update));
 
     if (update.message && update.message.text) {
-      const bot = new TelegramBot(process.env.BOT_TOKEN);
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
       const chatId = update.message.chat.id;
       const userText = update.message.text;
 
@@ -26,17 +40,18 @@ export default async function handler(req, res) {
         });
 
         const reply = response.choices[0].message.content;
-        await bot.sendMessage(chatId, reply);
+        await sendMessage(chatId, reply);
         
       } catch (err) {
         console.error("OpenAI error:", err);
-        await bot.sendMessage(chatId, "Sorry, something went wrong.");
+        await sendMessage(chatId, "Sorry, something went wrong.");
       }
     }
 
-    res.status(200).send("OK");
+    return res.status(200).send("OK");
+
   } catch (err) {
     console.error("Webhook handler error:", err);
-    res.status(500).send("Internal Server Error");
+    return res.status(500).send("Internal Server Error");
   }
 }
