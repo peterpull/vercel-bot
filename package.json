@@ -2,6 +2,7 @@
   "name": "vercel-bot",
   "version": "1.0.0",
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "openai": "^4.0.0"
   }
 }
